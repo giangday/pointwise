@@ -14,9 +14,12 @@ module pointwise_top #(
     input  wire                                      i_is_last,
     input  wire                                      i_is_first,
     input  wire [1:0]                                i_fifo_mode,
+    input  wire                                      i_is_relu,
+
     input  wire [IN_CHANNELS*DATA_WIDTH-1:0]         i_data_feature,
     input  wire [OUT_CHANNELS*IN_CHANNELS*DATA_WIDTH-1:0] i_data_weight_pw0,
     input  wire [OUT_CHANNELS*IN_CHANNELS*DATA_WIDTH-1:0] i_data_weight_pw1,
+
     output wire [OUT_CHANNELS*OUTPUT_WIDTH-1:0]      o_data,
     output wire                                      o_valid,
     output wire [OUT_CHANNELS*OUTPUT_WIDTH-1:0]      o_data_pw1,
@@ -38,7 +41,7 @@ wire       fifo0_wr_en;
 wire       fifo1_wr_en;
 wire       quant0_valid_unused;
 wire       quant1_valid_unused;
-wire       relu_en_unused;
+wire       relu_en;
 wire       controller_o_valid_unused;
 
 wire [IN_CHANNELS*DATA_WIDTH-1:0] feature_reg;
@@ -49,6 +52,8 @@ wire [OUT_CHANNELS*PSUM_WIDTH-1:0] pw1_out_raw;
 wire [OUT_CHANNELS*OUTPUT_WIDTH-1:0] stage7_out;
 wire [OUT_CHANNELS*OUTPUT_WIDTH-1:0] fifo0_out;
 wire [OUT_CHANNELS*OUTPUT_WIDTH-1:0] fifo1_out;
+wire [OUT_CHANNELS*OUTPUT_WIDTH-1:0] o_data_relu;
+wire [OUT_CHANNELS*OUTPUT_WIDTH-1:0] o_data_pw1_relu;
 wire                                 fifo0_full;
 wire                                 fifo0_empty;
 wire                                 fifo1_full;
@@ -67,37 +72,12 @@ reg  [OUT_CHANNELS*OUTPUT_WIDTH-1:0] o_data_pw1_reg;
 integer s;
 integer oc;
 
-genvar ch;
 
-function signed [OUTPUT_WIDTH-1:0] quantize_lane_no_relu;
-    input signed [PSUM_WIDTH-1:0] in_val;
-    reg   signed [PSUM_WIDTH-1:0] rounded_val;
-    reg   signed [PSUM_WIDTH-1:0] shifted_val;
-begin
-    if (in_val >= 0)
-        rounded_val = in_val + ({{(PSUM_WIDTH-1){1'b0}}, 1'b1} <<< (SHIFT_BITS-1));
-    else
-        rounded_val = in_val - ({{(PSUM_WIDTH-1){1'b0}}, 1'b1} <<< (SHIFT_BITS-1));
 
-    shifted_val = rounded_val >>> SHIFT_BITS;
+wire [OUT_CHANNELS*OUTPUT_WIDTH-1:0] pw0_out;
+wire [OUT_CHANNELS*OUTPUT_WIDTH-1:0] pw1_out;
 
-    if (shifted_val > $signed(16'sh7FFF))
-        quantize_lane_no_relu = 16'sh7FFF;
-    else if (shifted_val < $signed(16'sh8000))
-        quantize_lane_no_relu = 16'sh8000;
-    else
-        quantize_lane_no_relu = shifted_val[OUTPUT_WIDTH-1:0];
-end
-endfunction
 
-generate
-    for (ch = 0; ch < OUT_CHANNELS; ch = ch + 1) begin : GEN_POST_MAC_QUANT
-        assign pw0_out[ch*OUTPUT_WIDTH +: OUTPUT_WIDTH] =
-            quantize_lane_no_relu($signed(pw0_out_raw[ch*PSUM_WIDTH +: PSUM_WIDTH]));
-        assign pw1_out[ch*OUTPUT_WIDTH +: OUTPUT_WIDTH] =
-            quantize_lane_no_relu($signed(pw1_out_raw[ch*PSUM_WIDTH +: PSUM_WIDTH]));
-    end
-endgenerate
 
 controller_pointwise u_controller (
     .clk(clk),
@@ -106,10 +86,12 @@ controller_pointwise u_controller (
     .i_mode(i_mode),
     .i_is_last(i_is_last),
     .i_is_first(i_is_first),
+    .i_is_relu(i_is_relu),
     .valid_pipe(valid_pipe),
     .mode_pipe(mode_pipe),
     .is_last_pipe(is_last_pipe),
     .is_first_pipe(is_first_pipe),
+    .relu_pipe(),
     .pw_en(pw_en),
     .fifo_rd_en(fifo_rd_en),
     .stage7_mode(stage7_mode),
@@ -121,7 +103,7 @@ controller_pointwise u_controller (
     .fifo1_wr_en(fifo1_wr_en),
     .quant0_valid(quant0_valid_unused),
     .quant1_valid(quant1_valid_unused),
-    .relu_en(relu_en_unused),
+    .relu_en(relu_en),
     .o_valid(controller_o_valid_unused)
 );
 
@@ -166,6 +148,29 @@ input_register #(
     .o_data_psum(pw1_out_raw),
     .o_valid()
 );
+.
+// output cua pw0
+quantize_vector_no_relu #(
+    .IN_WIDTH(PSUM_WIDTH),
+    .OUT_WIDTH(OUTPUT_WIDTH),
+    .CHANNELS(OUT_CHANNELS),
+    .SHIFT_BITS(SHIFT_BITS)
+) u_quant_pw0 (
+    .i_data(pw0_out_raw),
+    .o_data(pw0_out)
+);
+// output cua pw1
+quantize_vector_no_relu #(
+    .IN_WIDTH(PSUM_WIDTH),
+    .OUT_WIDTH(OUTPUT_WIDTH),
+    .CHANNELS(OUT_CHANNELS),
+    .SHIFT_BITS(SHIFT_BITS)
+) u_quant_pw1 (
+    .i_data(pw1_out_raw),
+    .o_data(pw1_out)
+);
+
+
 
 pw0_pw1_adder #(
     .DATA_WIDTH(OUTPUT_WIDTH),
@@ -289,8 +294,26 @@ always @(posedge clk or negedge rst_n) begin
     end
 end
 
-assign o_data     = o_data_reg;
-assign o_data_pw1 = o_data_pw1_reg;
+relu_vector #(
+    .DATA_WIDTH(OUTPUT_WIDTH),
+    .CHANNELS(OUT_CHANNELS)
+) u_relu_pw0 (
+    .i_data(o_data_reg),
+    .i_enable(relu_en),
+    .o_data(o_data_relu)
+);
+
+relu_vector #(
+    .DATA_WIDTH(OUTPUT_WIDTH),
+    .CHANNELS(OUT_CHANNELS)
+) u_relu_pw1 (
+    .i_data(o_data_pw1_reg),
+    .i_enable(relu_en),
+    .o_data(o_data_pw1_relu)
+);
+
+assign o_data     = o_data_relu;
+assign o_data_pw1 = o_data_pw1_relu;
 assign o_valid    = valid_pipe[9] & is_last_pipe[9];
 assign o_valid_pw1 = valid_pipe[9] & is_last_pipe[9] & ~mode_pipe[9];
 

@@ -7,10 +7,12 @@ module controller_pointwise #(
     input  wire                      i_mode,
     input  wire                      i_is_last,
     input  wire                      i_is_first,
+    input  wire                      i_is_relu,
     output reg  [PIPELINE_DEPTH-1:0] valid_pipe,
     output reg  [PIPELINE_DEPTH-1:0] mode_pipe,
     output reg  [PIPELINE_DEPTH-1:0] is_last_pipe,
     output reg  [PIPELINE_DEPTH-1:0] is_first_pipe,
+    output reg  [PIPELINE_DEPTH-1:0] relu_pipe,
     output wire                      pw_en,
     output wire                      fifo_rd_en,
     output wire                      stage7_mode,
@@ -32,11 +34,13 @@ always @(posedge clk or negedge rst_n) begin
         mode_pipe     <= {PIPELINE_DEPTH{1'b0}};
         is_last_pipe  <= {PIPELINE_DEPTH{1'b0}};
         is_first_pipe <= {PIPELINE_DEPTH{1'b0}};
+        relu_pipe     <= {PIPELINE_DEPTH{1'b0}};
     end else begin
         valid_pipe    <= {valid_pipe[PIPELINE_DEPTH-2:0], i_valid};
         mode_pipe     <= {mode_pipe[PIPELINE_DEPTH-2:0], i_mode};
         is_last_pipe  <= {is_last_pipe[PIPELINE_DEPTH-2:0], i_is_last};
         is_first_pipe <= {is_first_pipe[PIPELINE_DEPTH-2:0], i_is_first};
+        relu_pipe     <= {relu_pipe[PIPELINE_DEPTH-2:0], i_is_relu};
     end
 end
 
@@ -51,7 +55,7 @@ assign fifo0_wr_en         = valid_pipe[8] & ~is_last_pipe[8];
 assign fifo1_wr_en         = valid_pipe[8] & ~mode_pipe[8] & ~is_last_pipe[8];
 assign quant0_valid        = valid_pipe[8] & is_last_pipe[8];
 assign quant1_valid        = valid_pipe[8] & ~mode_pipe[8] & is_last_pipe[8];
-assign relu_en             = is_last_pipe[8];
+assign relu_en             = relu_pipe[9];
 assign o_valid             = valid_pipe[9];
 
 endmodule
