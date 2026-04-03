@@ -61,7 +61,7 @@ module pw_top #(
 );
 
 localparam NUM_LEVELS = $clog2(IN_CHANNELS) + 1;
-localparam FIFO_DELAY = 2;
+localparam FIFO_DELAY = 1;
 
 reg  [PIPE_DEPTH-1:0] valid_pipe;
 reg  [PIPE_DEPTH-1:0] mode_pipe;
@@ -101,10 +101,10 @@ integer s;
 
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-        valid_pipe <= '0;
-        mode_pipe  <= '0;
-        first_pipe <= '0;
-        last_pipe  <= '0;
+        valid_pipe <= 0;
+        mode_pipe  <= 0;
+        first_pipe <= 0;
+        last_pipe  <= 0;
     end else begin
         valid_pipe <= {valid_pipe[PIPE_DEPTH-2:0], i_valid};
         mode_pipe  <= {mode_pipe[PIPE_DEPTH-2:0], i_mode};
@@ -195,8 +195,8 @@ psum_fifo #(
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         for (s = 0; s < FIFO_DELAY; s = s + 1) begin
-            fifo0_delay[s] <= '0;
-            fifo1_delay[s] <= '0;
+            fifo0_delay[s] <= 0;
+            fifo1_delay[s] <= 0;
             fifo0_empty_pipe[s] <= 1'b1;
             fifo1_empty_pipe[s] <= 1'b1;
         end
@@ -209,7 +209,6 @@ always @(posedge clk or negedge rst_n) begin
         for (s = 1; s < FIFO_DELAY; s = s + 1) begin
             fifo0_delay[s] <= fifo0_delay[s-1];
             fifo1_delay[s] <= fifo1_delay[s-1];
-            
             fifo0_empty_pipe[s] <= fifo0_empty_pipe[s-1];
             fifo1_empty_pipe[s] <= fifo1_empty_pipe[s-1];
         end
@@ -226,7 +225,7 @@ psum_adder_pw #(
     .i_is_first(first_pipe[6]),
     .i_data(pw0_adder_out),
     .i_fifo_data(fifo0_delay[FIFO_DELAY-1]),
-    .i_fifo_empty(fifo0_empty_pipe[FIFO_DELAY-1]),
+    .i_fifo_empty(fifo0_empty_pipe[FIFO_DELAY]),
     .o_data(pw0_psum_out)
 );
 
@@ -240,7 +239,7 @@ psum_adder_pw #(
     .i_is_first(first_pipe[6]),
     .i_data(pw1_adder_out),
     .i_fifo_data(fifo1_delay[FIFO_DELAY-1]),
-    .i_fifo_empty(fifo1_empty_pipe[FIFO_DELAY-1]),
+    .i_fifo_empty(fifo1_empty_pipe[FIFO_DELAY]),
     .o_data(pw1_psum_out)
 );
 

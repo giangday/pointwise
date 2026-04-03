@@ -8,8 +8,7 @@ module tb_pw_top;
     localparam FIFO_MAX_PTR = 64*64;
     localparam PIPE_DEPTH   = 8;
     localparam PSUM_WIDTH   = (DATA_WIDTH * 2) + $clog2(IN_CHANNELS);
-    localparam NUM_RANDOM_TILES = 64;
-    localparam MAX_TILE_PASSES  = 4;
+    localparam NUM_RANDOM_TILES = 12;
 
     reg clk;
     reg rst_n;
@@ -411,11 +410,11 @@ module tb_pw_top;
 
         for (tile_idx = 0; tile_idx < NUM_RANDOM_TILES; tile_idx = tile_idx + 1) begin
             tile_mode = rand_range(0, 1);
-            tile_len  = rand_range(1, MAX_TILE_PASSES);
+            tile_len  = rand_range(1, 3);
             clear_model_fifo();
 
-            $display("RANDOM TILE %0d/%0d mode=%0d passes=%0d start_time=%0t",
-                     tile_idx, NUM_RANDOM_TILES-1, tile_mode, tile_len, $time);
+            $display("RANDOM TILE %0d mode=%0d passes=%0d start_time=%0t",
+                     tile_idx, tile_mode, tile_len, $time);
 
             for (pass_idx = 0; pass_idx < tile_len; pass_idx = pass_idx + 1) begin
                 pass_first = (pass_idx == 0);

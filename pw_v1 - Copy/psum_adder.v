@@ -24,7 +24,7 @@ always @(posedge clk or negedge rst_n) begin
         o_data <= 0;
     end else if (i_valid) begin
         for (ch = 0; ch < CHANNELS; ch = ch + 1) begin
-            if (use_fifo) begin
+            if (i_is_first) begin
                 o_data[ch*DATA_WIDTH +: DATA_WIDTH] <=
                     $signed(i_data[ch*DATA_WIDTH +: DATA_WIDTH]);
             end else begin
