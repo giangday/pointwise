@@ -6,7 +6,7 @@ module psum_fifo #(
     input  wire                     clk,
     input  wire                     rst_n,
 
-    input  wire [1:0]               i_mode,
+    input  wire [7:0]               i_mode,
 
     input  wire [OC*DATA_WIDTH-1:0] i_data,
     input  wire                     wr_en,
@@ -33,10 +33,10 @@ reg [$clog2(MAX_PTR+1)-1:0] current_max_depth;
 
 always @(*) begin
     case (i_mode)
-        2'b00: current_max_depth = 4096;
-        2'b01: current_max_depth = 1024;
-        2'b10: current_max_depth = 256;
-        2'b11: current_max_depth = 64;
+        8'b01000000: current_max_depth = 4096;
+        8'b00100000: current_max_depth = 1024;
+        8'b00010000: current_max_depth = 256;
+        8'b00001000: current_max_depth = 64;
         default: current_max_depth = 4096;
     endcase
 end
@@ -46,7 +46,9 @@ wire do_write = wr_en && !full;
 wire do_read  = rd_en && !empty;
 
 assign full  = (count == current_max_depth);
+//empty=1 khi count = 0
 assign empty = (count == 0);
+
 
 // ================= MEMORY ACCESS =================
 always @(posedge clk) begin

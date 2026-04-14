@@ -7,59 +7,61 @@ module pw_top #(
 )(
     input  wire                                      clk,
     input  wire                                      rst_n,
-    input  wire                                      i_weight_valid,
+    input  wire                                      i_weight_valid0,       //D: added
+    input  wire                                      i_weight_valid1,       //D: added
     input  wire                                      i_valid,
-    input  wire                                      i_store_valid,
     input  wire                                      i_mode,
     input  wire                                      i_is_first,
     input  wire                                      i_is_last,
-    input  wire [1:0]                                i_fifo_mode,
-    input  wire [IN_CHANNELS*DATA_WIDTH-1:0]         i_data_feature,
-    input  wire [OUT_CHANNELS*IN_CHANNELS*DATA_WIDTH-1:0] i_data_weight_pw0,
-    input  wire [OUT_CHANNELS*IN_CHANNELS*DATA_WIDTH-1:0] i_data_weight_pw1,
-    input  wire [OUT_CHANNELS*DATA_WIDTH-1:0]        bias_pw0,
-    input  wire [OUT_CHANNELS*DATA_WIDTH-1:0]        bias_pw1,
+    input  wire                                      i_rst_stage,           //reset flag stage done
+    input  wire [7:0]                                i_fifo_mode,
+    input  wire [IN_CHANNELS*DATA_WIDTH*2-1:0]       i_data_feature,
+    input  wire [OUT_CHANNELS*IN_CHANNELS*DATA_WIDTH-1:0] i_data_weight_pw,
+    input  wire                                      i_bias_valid0,       //D: added
+    input  wire                                      i_bias_valid1,       //D: added
+    input  wire [OUT_CHANNELS*DATA_WIDTH-1:0]        i_bias_pw,
 
     output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_data_pw0,
     output wire                                      o_valid_pw0,
     output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_data_pw1,
     output wire                                      o_valid_pw1,
-//---------------------------------------------------------------------------------
-    output wire [PIPE_DEPTH-1:0]                     o_valid_pipe_dbg,
-    output wire [PIPE_DEPTH-1:0]                     o_mode_pipe_dbg,
-    output wire [PIPE_DEPTH-1:0]                     o_first_pipe_dbg,
-    output wire [PIPE_DEPTH-1:0]                     o_last_pipe_dbg,
+    output wire                                      o_stage_done           // flag stage done
+//--------------------------------------------------------------------------------- 
+//    output wire [PIPE_DEPTH-1:0]                     o_valid_pipe_dbg,
+//    output wire [PIPE_DEPTH-1:0]                     o_mode_pipe_dbg,
+//    output wire [PIPE_DEPTH-1:0]                     o_first_pipe_dbg,
+//    output wire [PIPE_DEPTH-1:0]                     o_last_pipe_dbg,
 
-    output wire                                      o_fifo0_rd_en_dbg,
-    output wire                                      o_fifo1_rd_en_dbg,
-    output wire                                      o_relu0_fifo_wr_en_dbg,
-    output wire                                      o_relu1_fifo_wr_en_dbg,
+//    output wire                                      o_fifo0_rd_en_dbg,
+//    output wire                                      o_fifo1_rd_en_dbg,
+//    output wire                                      o_relu0_fifo_wr_en_dbg,
+//    output wire                                      o_relu1_fifo_wr_en_dbg,
 
-    output wire                                      o_fifo0_full_dbg,
-    output wire                                      o_fifo0_empty_dbg,
-    output wire                                      o_fifo1_full_dbg,
-    output wire                                      o_fifo1_empty_dbg,
+//    output wire                                      o_fifo0_full_dbg,
+//    output wire                                      o_fifo0_empty_dbg,
+//    output wire                                      o_fifo1_full_dbg,
+//    output wire                                      o_fifo1_empty_dbg,
 
-    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_pw0_mac_out_dbg,
-    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_pw1_mac_out_dbg,
-    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_pw0_adder_out_dbg,
-    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_pw1_adder_out_dbg,
-    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_fifo0_out_dbg,
-    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_fifo1_out_dbg,
-    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_fifo0_delay0_dbg,
-    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_fifo0_delay1_dbg,
-    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_fifo1_delay0_dbg,
-    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_fifo1_delay1_dbg,
-    output wire                                      o_fifo0_empty_pipe0_dbg,
-    output wire                                      o_fifo0_empty_pipe1_dbg,
-    output wire                                      o_fifo1_empty_pipe0_dbg,
-    output wire                                      o_fifo1_empty_pipe1_dbg,
-    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_pw0_psum_out_dbg,
-    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_pw1_psum_out_dbg,
-    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_relu0_out_dbg,
-    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_relu1_out_dbg,
-    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_relu0_fifo_data_dbg,
-    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_relu1_fifo_data_dbg
+//    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_pw0_mac_out_dbg,
+//    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_pw1_mac_out_dbg,
+//    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_pw0_adder_out_dbg,
+//    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_pw1_adder_out_dbg,
+//    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_fifo0_out_dbg,
+//    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_fifo1_out_dbg,
+//    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_fifo0_delay0_dbg,
+//    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_fifo0_delay1_dbg,
+//    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_fifo1_delay0_dbg,
+//    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_fifo1_delay1_dbg,
+//    output wire                                      o_fifo0_empty_pipe0_dbg,
+//    output wire                                      o_fifo0_empty_pipe1_dbg,
+//    output wire                                      o_fifo1_empty_pipe0_dbg,
+//    output wire                                      o_fifo1_empty_pipe1_dbg,
+//    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_pw0_psum_out_dbg,
+//    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_pw1_psum_out_dbg,
+//    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_relu0_out_dbg,
+//    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_relu1_out_dbg,
+//    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_relu0_fifo_data_dbg,
+//    output wire [OUT_CHANNELS*DATA_WIDTH-1:0]        o_relu1_fifo_data_dbg
 );
 
 localparam NUM_LEVELS = $clog2(IN_CHANNELS) + 1;
@@ -123,9 +125,9 @@ always @(posedge clk or negedge rst_n) begin
         weight_pw1_loaded <= 1'b0;
     end else begin
         if (pw0_weight_valid)
-            weight_pw0_loaded <= 1'b1;
+            weight_pw0_loaded <= 1'b1; // co gi do sai sai 
         if (pw1_weight_valid)
-            weight_pw1_loaded <= 1'b1;
+            weight_pw1_loaded <= 1'b1; // co gi do sai sai 
 
         valid_pipe <= {valid_pipe[PIPE_DEPTH-2:0], feature_fire};
         mode_pipe  <= {mode_pipe[PIPE_DEPTH-2:0], i_mode};
@@ -186,7 +188,7 @@ always @(posedge clk or negedge rst_n) begin
 end
 
 
-
+// buffer weight vao 2 buffer rieng biet cho pw0 va pw1
 weight_buffer #(
     .CLUSTER_SIZE(CLUSTER_WIDTH),
     .NUM_CLUSTERS(OUT_CHANNELS),
@@ -195,8 +197,8 @@ weight_buffer #(
 ) u_weight_buffer0 (
     .clk(clk),
     .rst_n(rst_n),
-    .i_valid(i_weight_valid),
-    .i_data(i_data_weight_pw0),
+    .i_valid(i_weight_valid0),
+    .i_data(i_data_weight_pw),
     .cluster_flat(pw0_weight_buf),
     .o_valid(pw0_weight_valid)
 );
@@ -209,12 +211,13 @@ weight_buffer #(
 ) u_weight_buffer1 (
     .clk(clk),
     .rst_n(rst_n),
-    .i_valid(i_weight_valid),
-    .i_data(i_data_weight_pw1),
+    .i_valid(i_weight_valid1),
+    .i_data(i_data_weight_pw),
     .cluster_flat(pw1_weight_buf),
     .o_valid(pw1_weight_valid)
 );
 
+// MAC module: nhan i_data_feature voi i_data_weight_pw, dua ra pw0_mac_out va pw1_mac_out
 pw_mac #(
     .DATA_WIDTH(DATA_WIDTH),
     .IN_CHANNELS(IN_CHANNELS),
@@ -224,7 +227,7 @@ pw_mac #(
     .rst_n(rst_n),
     .i_valid(feature_fire),
     .i_valid_pipe(valid_pipe[4:0]),
-    .i_data_feature(i_data_feature),
+    .i_data_feature(i_data_feature[255:0]),
     .i_data_weight(pw0_weight_buf),
     .o_data(pw0_mac_out)
 );
@@ -238,11 +241,12 @@ pw_mac #(
     .rst_n(rst_n),
     .i_valid(feature_fire),
     .i_valid_pipe(valid_pipe[4:0]),
-    .i_data_feature(i_data_feature),
+    .i_data_feature(i_data_feature[511:256]),
     .i_data_weight(pw1_weight_buf),
     .o_data(pw1_mac_out)
 );
 
+// cong pw0_mac_out voi pw1_mac_out, neu i_mode = 0 thi cong, neu i_mode = 1 thi khong cong ma dua thang pw0_mac_out vao pw0_adder_out va pw1_mac_out vao pw1_adder_out
 pw0_pw1_adder #(
     .DATA_WIDTH(DATA_WIDTH),
     .CHANNELS(OUT_CHANNELS)
@@ -257,6 +261,7 @@ pw0_pw1_adder #(
     .o_data_pw1(pw1_adder_out)
 );
 
+// fifo dung de luu tru psum tam thoi, khi nao can cong psum thi doc ra tu fifo, neu fifo empty thi coi nhu 0
 psum_fifo #(
     .MAX_PTR(FIFO_MAX_PTR),
     .DATA_WIDTH(DATA_WIDTH),
@@ -290,7 +295,7 @@ psum_fifo #(
 );
 
 
-
+// cong thuc tinh psum trong psum_adder_pw, neu la first thi khong cong psum tu fifo, neu khong phai first thi cong voi psum tu fifo (neu fifo empty thi coi nhu 0)
 psum_adder_pw #(
     .DATA_WIDTH(DATA_WIDTH),
     .CHANNELS(OUT_CHANNELS)
@@ -319,6 +324,30 @@ psum_adder_pw #(
     .o_data(pw1_psum_out)
 );
 
+// added bias buffer
+bias_buffer #(
+    .DATA_WIDTH(DATA_WIDTH),
+    .CHANNELS(OUT_CHANNELS)
+) u_bias_buffer0 (
+    .clk(clk),
+    .rst_n(rst_n),
+    .i_valid(i_bias_valid0), //D: added
+    .i_data(i_bias_pw),
+    .o_data(bias_pw0)
+);
+
+bias_buffer #(
+    .DATA_WIDTH(DATA_WIDTH),
+    .CHANNELS(OUT_CHANNELS)
+) u_bias_buffer1 (
+    .clk(clk),
+    .rst_n(rst_n),
+    .i_valid(i_bias_valid1), //D: added
+    .i_data(i_bias_pw),
+    .o_data(bias_pw1)
+);
+
+// added relu + output module
 relu_output #(
     .DATA_WIDTH(DATA_WIDTH),
     .CHANNELS(OUT_CHANNELS)
@@ -351,46 +380,58 @@ relu_output #(
     .o_valid(relu1_valid)
 );
 
+// count stage done: neu da duyet het du lieu cua stage do thi set stage_done = 1, nguoc lai thi set stage_done = 0
+count_stage_done u_count_stage_done0 (
+    .clk(clk),
+    .rst_n(rst_n),
+    .rst_stage_done(rst_stage_done),
+    .relu_valid(relu0_valid),
+    .i_mode(i_fifo_mode),
+    .stage_done(o_stage_done)
+);
+
+
+
 assign o_data_pw0  = relu0_out;
 assign o_valid_pw0 = relu0_valid;
 assign o_data_pw1  = relu1_out;
 assign o_valid_pw1 = relu1_valid;
 
 // debug outputs
-assign o_valid_pipe_dbg        = valid_pipe;
-assign o_mode_pipe_dbg         = mode_pipe;
-assign o_first_pipe_dbg        = first_pipe;
-assign o_last_pipe_dbg         = last_pipe;
+//assign o_valid_pipe_dbg        = valid_pipe;
+//assign o_mode_pipe_dbg         = mode_pipe;
+//assign o_first_pipe_dbg        = first_pipe;
+//assign o_last_pipe_dbg         = last_pipe;
 
-assign o_fifo0_rd_en_dbg       = fifo0_rd_en;
-assign o_fifo1_rd_en_dbg       = fifo1_rd_en;
-assign o_relu0_fifo_wr_en_dbg  = relu0_fifo_wr_en;
-assign o_relu1_fifo_wr_en_dbg  = relu1_fifo_wr_en;
+//assign o_fifo0_rd_en_dbg       = fifo0_rd_en;
+//assign o_fifo1_rd_en_dbg       = fifo1_rd_en;
+//assign o_relu0_fifo_wr_en_dbg  = relu0_fifo_wr_en;
+//assign o_relu1_fifo_wr_en_dbg  = relu1_fifo_wr_en;
 
-assign o_fifo0_full_dbg        = fifo0_full;
-assign o_fifo0_empty_dbg       = fifo0_empty;
-assign o_fifo1_full_dbg        = fifo1_full;
-assign o_fifo1_empty_dbg       = fifo1_empty;
+//assign o_fifo0_full_dbg        = fifo0_full;
+//assign o_fifo0_empty_dbg       = fifo0_empty;
+//assign o_fifo1_full_dbg        = fifo1_full;
+//assign o_fifo1_empty_dbg       = fifo1_empty;
 
-assign o_pw0_mac_out_dbg       = pw0_mac_out;
-assign o_pw1_mac_out_dbg       = pw1_mac_out;
-assign o_pw0_adder_out_dbg     = pw0_adder_out;
-assign o_pw1_adder_out_dbg     = pw1_adder_out;
-assign o_fifo0_out_dbg         = fifo0_out;
-assign o_fifo1_out_dbg         = fifo1_out;
-assign o_fifo0_delay0_dbg      = fifo0_data_delay0;
-assign o_fifo0_delay1_dbg      = fifo0_data_delay1;
-assign o_fifo1_delay0_dbg      = fifo1_data_delay0;
-assign o_fifo1_delay1_dbg      = fifo1_data_delay1;
-assign o_fifo0_empty_pipe0_dbg = fifo0_empty1;
-assign o_fifo0_empty_pipe1_dbg = fifo0_empty2;
-assign o_fifo1_empty_pipe0_dbg = fifo1_empty1;
-assign o_fifo1_empty_pipe1_dbg = fifo1_empty2;
-assign o_pw0_psum_out_dbg      = pw0_psum_out;
-assign o_pw1_psum_out_dbg      = pw1_psum_out;
-assign o_relu0_out_dbg         = relu0_out;
-assign o_relu1_out_dbg         = relu1_out;
-assign o_relu0_fifo_data_dbg   = relu0_fifo_data;
-assign o_relu1_fifo_data_dbg   = relu1_fifo_data;
+//assign o_pw0_mac_out_dbg       = pw0_mac_out;
+//assign o_pw1_mac_out_dbg       = pw1_mac_out;
+//assign o_pw0_adder_out_dbg     = pw0_adder_out;
+//assign o_pw1_adder_out_dbg     = pw1_adder_out;
+//assign o_fifo0_out_dbg         = fifo0_out;
+//assign o_fifo1_out_dbg         = fifo1_out;
+//assign o_fifo0_delay0_dbg      = fifo0_data_delay0;
+//assign o_fifo0_delay1_dbg      = fifo0_data_delay1;
+//assign o_fifo1_delay0_dbg      = fifo1_data_delay0;
+//assign o_fifo1_delay1_dbg      = fifo1_data_delay1;
+//assign o_fifo0_empty_pipe0_dbg = fifo0_empty1;
+//assign o_fifo0_empty_pipe1_dbg = fifo0_empty2;
+//assign o_fifo1_empty_pipe0_dbg = fifo1_empty1;
+//assign o_fifo1_empty_pipe1_dbg = fifo1_empty2;
+//assign o_pw0_psum_out_dbg      = pw0_psum_out;
+//assign o_pw1_psum_out_dbg      = pw1_psum_out;
+//assign o_relu0_out_dbg         = relu0_out;
+//assign o_relu1_out_dbg         = relu1_out;
+//assign o_relu0_fifo_data_dbg   = relu0_fifo_data;
+//assign o_relu1_fifo_data_dbg   = relu1_fifo_data;
 
 endmodule

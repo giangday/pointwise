@@ -12,7 +12,6 @@ module pw_mac #(
     input  wire [NUM_LEVELS-1:0]                     i_valid_pipe,
     input  wire [IN_CHANNELS*DATA_WIDTH-1:0]         i_data_feature,
     input  wire [OUT_CHANNELS*IN_CHANNELS*DATA_WIDTH-1:0] i_data_weight,
-    input  wire [OUT_CHANNELS*IN_CHANNELS*DATA_WIDTH-1:0] i_data_bias,
     output reg  [OUT_CHANNELS*DATA_WIDTH-1:0]        o_data
 );
 
@@ -64,8 +63,7 @@ always @(posedge clk or negedge rst_n) begin
             for (ic = 0; ic < IN_CHANNELS; ic = ic + 1) begin
                 mult_reg[oc][ic] <=
                     $signed(i_data_feature[ic*DATA_WIDTH +: DATA_WIDTH])
-                    * $signed(i_data_weight[(oc*IN_CHANNELS+ic)*DATA_WIDTH +: DATA_WIDTH]) 
-                    + $signed(i_data_bias[(oc*IN_CHANNELS+ic)*DATA_WIDTH +: DATA_WIDTH]);
+                    * $signed(i_data_weight[(oc*IN_CHANNELS+ic)*DATA_WIDTH +: DATA_WIDTH]);
             end
         end
     end

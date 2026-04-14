@@ -46,7 +46,9 @@ wire do_write = wr_en && !full;
 wire do_read  = rd_en && !empty;
 
 assign full  = (count == current_max_depth);
+//empty=1 khi count = 0
 assign empty = (count == 0);
+
 
 // ================= MEMORY ACCESS =================
 always @(posedge clk) begin

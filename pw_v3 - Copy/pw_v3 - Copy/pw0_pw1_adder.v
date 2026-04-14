@@ -14,6 +14,30 @@ module pw0_pw1_adder #(
 
 integer i;
 
+
+function signed [DATA_WIDTH-1:0] sat_add_lane;
+    input signed [DATA_WIDTH-1:0] a;
+    input signed [DATA_WIDTH-1:0] b;
+    reg   signed [DATA_WIDTH-1:0] sum;
+    reg overflow;
+begin
+    sum = a + b;
+
+    overflow = (a[DATA_WIDTH-1] == b[DATA_WIDTH-1]) &&
+               (sum[DATA_WIDTH-1] != a[DATA_WIDTH-1]);
+
+    if (overflow) begin
+        if (a[DATA_WIDTH-1] == 0)
+            sat_add_lane = {1'b0, {(DATA_WIDTH-1){1'b1}}}; // max
+        else
+            sat_add_lane = {1'b1, {(DATA_WIDTH-1){1'b0}}}; // min
+    end else begin
+        sat_add_lane = sum;
+    end
+end
+endfunction
+
+
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         o_data_pw0 <= 0;
@@ -23,8 +47,10 @@ always @(posedge clk or negedge rst_n) begin
             for (i = 0; i < CHANNELS; i = i + 1) begin
                 if (i_mode) begin
                     o_data_pw0[i*DATA_WIDTH +: DATA_WIDTH] <=
-                        $signed(i_data_pw0[i*DATA_WIDTH +: DATA_WIDTH]) +
-                        $signed(i_data_pw1[i*DATA_WIDTH +: DATA_WIDTH]);
+                        sat_add_lane(
+                            i_data_pw0[i*DATA_WIDTH +: DATA_WIDTH],
+                            i_data_pw1[i*DATA_WIDTH +: DATA_WIDTH]
+                        );
                     o_data_pw1[i*DATA_WIDTH +: DATA_WIDTH] <= 0;
                 end else begin
                     o_data_pw0[i*DATA_WIDTH +: DATA_WIDTH] <=
@@ -39,5 +65,4 @@ always @(posedge clk or negedge rst_n) begin
 end
 
 endmodule
-
 
